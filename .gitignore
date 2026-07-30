@@ -1,0 +1,22 @@
+# Build outputs
+cleaner
+download-inbox-cleaner
+dist/
+coverage.out
+coverage.html
+
+# Go workspace files
+go.work
+go.work.sum
+
+# macOS and editor files
+.DS_Store
+.idea/
+.vscode/
+*.swp
+*~
+
+# Local configuration and secrets
+.env
+.env.*
+!.env.example

@@ -1,0 +1,28 @@
+version: 2
+
+before:
+  hooks:
+    - go test ./...
+
+builds:
+  - id: cleaner
+    main: .
+    binary: cleaner
+    ldflags:
+      - -s -w -X main.version={{ .Version }}
+    goos: [darwin]
+    goarch: [arm64, amd64]
+
+archives:
+  - id: default
+    formats: [tar.gz]
+    name_template: "{{ .ProjectName }}_{{ .Version }}_{{ .Os }}_{{ .Arch }}"
+
+brews:
+  - repository:
+      owner: stawan15
+      name: homebrew-tap
+    homepage: https://github.com/stawan15/download-inbox-cleaner
+    description: Cautious macOS Downloads-folder cleaner
+    install: |
+      bin.install "cleaner"
