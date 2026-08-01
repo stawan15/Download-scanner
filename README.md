@@ -10,9 +10,10 @@ Launch the interactive terminal interface:
 cleaner tui
 ```
 
-Use the numbered menu to scan a folder, find duplicates, review security risks,
-preview organization, or choose a different folder. Organizing files requires
-typing `MOVE`; undo requires typing `UNDO`.
+The full-screen workspace has a sidebar for Scan, Files, Duplicates, Security,
+Organization, and Undo. Use `j`/`k` (or arrow keys) to navigate, `enter` to
+refresh a panel, `d` to select a folder, and `q` to quit. Organizing files
+requires typing `MOVE`; undo requires typing `UNDO`.
 
 ## Install
 

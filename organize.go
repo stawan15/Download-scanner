@@ -3,6 +3,7 @@ package main
 import (
 	"encoding/json"
 	"fmt"
+	"io"
 	"os"
 	"path/filepath"
 	"sort"
@@ -70,6 +71,10 @@ func organizationPlans(directory string) ([]MovePlan, error) {
 }
 
 func applyOrganization(directory string) error {
+	return applyOrganizationTo(directory, os.Stdout)
+}
+
+func applyOrganizationTo(directory string, out io.Writer) error {
 	if err := validateOrganizationDirectory(directory); err != nil {
 		return err
 	}
@@ -78,23 +83,23 @@ func applyOrganization(directory string) error {
 		return err
 	}
 	if len(plans) == 0 {
-		fmt.Println("No files match the organization rules.")
+		fmt.Fprintln(out, "No files match the organization rules.")
 		return nil
 	}
 	var valid []MovePlan
 	for _, plan := range plans {
 		if _, err := os.Lstat(plan.Source); err != nil {
-			fmt.Printf("Skipping missing file: %s\n", filepath.Base(plan.Source))
+			fmt.Fprintf(out, "Skipping missing file: %s\n", filepath.Base(plan.Source))
 			continue
 		}
 		if _, err := os.Lstat(plan.Destination); err == nil {
-			fmt.Printf("Skipping existing destination: %s\n", plan.Destination)
+			fmt.Fprintf(out, "Skipping existing destination: %s\n", plan.Destination)
 			continue
 		}
 		valid = append(valid, plan)
 	}
 	if len(valid) == 0 {
-		fmt.Println("Nothing can be moved safely.")
+		fmt.Fprintln(out, "Nothing can be moved safely.")
 		return nil
 	}
 	var completed []MovePlan
@@ -113,13 +118,13 @@ func applyOrganization(directory string) error {
 			continue
 		}
 		completed = append(completed, plan)
-		fmt.Printf("Moved: %s\n", filepath.Base(plan.Source))
+		fmt.Fprintf(out, "Moved: %s\n", filepath.Base(plan.Source))
 	}
 	if len(completed) > 0 {
 		if err := writeOrganizationLog(completed); err != nil {
 			return fmt.Errorf("files were moved, but undo log could not be saved: %w", err)
 		}
-		fmt.Printf("\nMoved %d files. Run 'cleaner undo --yes' to reverse this organization.\n", len(completed))
+		fmt.Fprintf(out, "\nMoved %d files. Run 'cleaner undo --yes' to reverse this organization.\n", len(completed))
 	}
 	if len(failures) > 0 {
 		return fmt.Errorf("%d files could not be organized", len(failures))
@@ -151,6 +156,10 @@ func runUndo(args []string) error {
 }
 
 func undoOrganization() error {
+	return undoOrganizationTo(os.Stdout)
+}
+
+func undoOrganizationTo(out io.Writer) error {
 	logPath, err := organizationLogPath()
 	if err != nil {
 		return err
@@ -158,7 +167,7 @@ func undoOrganization() error {
 	data, err := os.ReadFile(logPath)
 	if err != nil {
 		if os.IsNotExist(err) {
-			fmt.Println("There is no organization run to undo.")
+			fmt.Fprintln(out, "There is no organization run to undo.")
 			return nil
 		}
 		return err
@@ -168,7 +177,7 @@ func undoOrganization() error {
 		return err
 	}
 	if len(log.Moves) == 0 {
-		fmt.Println("There is no organization run to undo.")
+		fmt.Fprintln(out, "There is no organization run to undo.")
 		return nil
 	}
 	var remaining []MovePlan
@@ -186,13 +195,13 @@ func undoOrganization() error {
 			remaining = append(remaining, plan)
 			continue
 		}
-		fmt.Printf("Restored: %s\n", filepath.Base(plan.Source))
+		fmt.Fprintf(out, "Restored: %s\n", filepath.Base(plan.Source))
 	}
 	if len(remaining) == 0 {
 		if err := os.Remove(logPath); err != nil {
 			return err
 		}
-		fmt.Println("\nOrganization undone successfully.")
+		fmt.Fprintln(out, "\nOrganization undone successfully.")
 		return nil
 	}
 	if err := writeOrganizationLog(remaining); err != nil {
