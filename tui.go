@@ -6,6 +6,7 @@ import (
 	"io"
 	"path/filepath"
 	"strings"
+	"time"
 
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
@@ -13,6 +14,8 @@ import (
 
 var (
 	tuiPrimary = lipgloss.AdaptiveColor{Light: "#5A56E0", Dark: "#7D7AFF"}
+	tuiSuccess = lipgloss.AdaptiveColor{Light: "#047857", Dark: "#5EEAD4"}
+	tuiWarning = lipgloss.AdaptiveColor{Light: "#B45309", Dark: "#FBBF24"}
 	tuiMuted   = lipgloss.AdaptiveColor{Light: "#6B7280", Dark: "#9CA3AF"}
 	tuiDanger  = lipgloss.AdaptiveColor{Light: "#B42318", Dark: "#FF8A80"}
 	tuiBorder  = lipgloss.AdaptiveColor{Light: "#D1D5DB", Dark: "#3F3F46"}
@@ -31,7 +34,17 @@ type tuiModel struct {
 	status    string
 	modal     string // "", "folder", "move", or "undo"
 	input     string
+	loading   bool
+	loadText  string
+	loadFrame int
 }
+
+type tuiLoadedMsg struct {
+	section int
+	model   tuiModel
+}
+
+type tuiTickMsg struct{}
 
 func runTUI(in io.Reader, out io.Writer) error {
 	directory, err := defaultDirectory()
@@ -45,18 +58,33 @@ func runTUI(in io.Reader, out io.Writer) error {
 }
 
 func newTUIModel(directory string) tuiModel {
-	m := tuiModel{directory: directory, title: "Overview", status: "Press enter to refresh. Press ? for keyboard help."}
-	return m.loadSection()
+	return tuiModel{directory: directory, title: "Overview", status: "Ready", loading: true, loadText: "Scanning your Downloads"}
 }
 
-func (m tuiModel) Init() tea.Cmd { return nil }
+func (m tuiModel) Init() tea.Cmd { return tea.Batch(m.loadCmd(), tuiSpinnerCmd()) }
 
 func (m tuiModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	switch msg := msg.(type) {
+	case tuiLoadedMsg:
+		if msg.section != m.active {
+			return m, nil
+		}
+		m.content, m.title, m.status = msg.model.content, msg.model.title, msg.model.status
+		m.scroll, m.loading = 0, false
+		return m, nil
+	case tuiTickMsg:
+		if m.loading {
+			m.loadFrame = (m.loadFrame + 1) % 4
+			return m, tuiSpinnerCmd()
+		}
+		return m, nil
 	case tea.WindowSizeMsg:
 		m.width, m.height = msg.Width, msg.Height
 		return m, nil
 	case tea.KeyMsg:
+		if m.loading && msg.String() != "q" && msg.String() != "ctrl+c" {
+			return m, nil
+		}
 		if m.modal != "" {
 			return m.updateModal(msg)
 		}
@@ -65,13 +93,13 @@ func (m tuiModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			return m, tea.Quit
 		case "up", "k":
 			m.active = (m.active + len(tuiSections) - 1) % len(tuiSections)
-			return m.loadSection(), nil
+			return m.beginLoad("Opening " + tuiSections[m.active])
 		case "down", "j", "tab":
 			m.active = (m.active + 1) % len(tuiSections)
-			return m.loadSection(), nil
+			return m.beginLoad("Opening " + tuiSections[m.active])
 		case "1", "2", "3", "4", "5", "6":
 			m.active = int(msg.String()[0] - '1')
-			return m.loadSection(), nil
+			return m.beginLoad("Opening " + tuiSections[m.active])
 		case "ctrl+f", "pgdown", "right":
 			m.scroll = min(m.scroll+max(3, m.height/2), max(0, len(m.content)-1))
 			return m, nil
@@ -85,7 +113,7 @@ func (m tuiModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			m.scroll = max(0, len(m.content)-1)
 			return m, nil
 		case "enter", "r":
-			return m.loadSection(), nil
+			return m.beginLoad("Refreshing " + tuiSections[m.active])
 		case "d":
 			m.modal, m.input = "folder", m.directory
 			return m, nil
@@ -123,7 +151,8 @@ func (m tuiModel) updateModal(key tea.KeyMsg) (tea.Model, tea.Cmd) {
 			} else {
 				m.directory = directory
 				m.status = "Folder changed to " + directory
-				m = m.loadSection()
+				m.modal, m.input = "", ""
+				return m.beginLoad("Scanning the new folder")
 			}
 		case "move":
 			if m.input != "MOVE" {
@@ -135,7 +164,8 @@ func (m tuiModel) updateModal(key tea.KeyMsg) (tea.Model, tea.Cmd) {
 				if err != nil {
 					m.status = "Error: " + err.Error() + "\n" + m.status
 				}
-				m = m.loadSection()
+				m.modal, m.input = "", ""
+				return m.beginLoad("Refreshing organization preview")
 			}
 		case "undo":
 			if m.input != "UNDO" {
@@ -157,6 +187,27 @@ func (m tuiModel) updateModal(key tea.KeyMsg) (tea.Model, tea.Cmd) {
 		}
 	}
 	return m, nil
+}
+
+func (m tuiModel) beginLoad(label string) (tea.Model, tea.Cmd) {
+	m.loading, m.loadText, m.loadFrame = true, label, 0
+	return m, tea.Batch(m.loadCmd(), tuiSpinnerCmd())
+}
+
+func (m tuiModel) loadCmd() tea.Cmd {
+	section := m.active
+	return func() tea.Msg {
+		started := time.Now()
+		loaded := m.loadSection()
+		if remaining := 350*time.Millisecond - time.Since(started); remaining > 0 {
+			time.Sleep(remaining)
+		}
+		return tuiLoadedMsg{section: section, model: loaded}
+	}
+}
+
+func tuiSpinnerCmd() tea.Cmd {
+	return tea.Tick(90*time.Millisecond, func(time.Time) tea.Msg { return tuiTickMsg{} })
 }
 
 func (m tuiModel) loadSection() tuiModel {
@@ -262,18 +313,32 @@ func (m tuiModel) View() string {
 	sidebar := lipgloss.NewStyle().Border(lipgloss.RoundedBorder()).BorderForeground(tuiBorder).Padding(1, 1).Width(sidebarWidth).Render(strings.Join(menu, "\n"))
 
 	maxLines := max(5, m.height-12)
-	start := min(m.scroll, max(0, len(m.content)-1))
-	end := min(len(m.content), start+maxLines)
-	visible := append([]string{}, m.content[start:end]...)
-	if start > 0 {
-		visible = append([]string{lipgloss.NewStyle().Foreground(tuiMuted).Render("↑ more above")}, visible...)
-	}
-	if end < len(m.content) {
-		visible = append(visible, lipgloss.NewStyle().Foreground(tuiMuted).Render("↓ more below  (←/→ to scroll)"))
+	visible := []string{}
+	if m.loading {
+		frames := []string{"◐", "◓", "◑", "◒"}
+		visible = []string{"", "", lipgloss.NewStyle().Bold(true).Foreground(tuiPrimary).Render(frames[m.loadFrame] + "  " + m.loadText), lipgloss.NewStyle().Foreground(tuiMuted).Render("Please wait — checking files safely.")}
+	} else {
+		start := min(m.scroll, max(0, len(m.content)-1))
+		end := min(len(m.content), start+maxLines)
+		visible = append([]string{}, m.content[start:end]...)
+		if start > 0 {
+			visible = append([]string{lipgloss.NewStyle().Foreground(tuiMuted).Render("↑ more above")}, visible...)
+		}
+		if end < len(m.content) {
+			visible = append(visible, lipgloss.NewStyle().Foreground(tuiMuted).Render("↓ more below  (←/→ to scroll)"))
+		}
 	}
 	lines := append([]string{lipgloss.NewStyle().Bold(true).Foreground(tuiPrimary).Render(m.title), ""}, visible...)
 	content := lipgloss.NewStyle().Border(lipgloss.RoundedBorder()).BorderForeground(tuiBorder).Padding(1, 2).Width(contentWidth).Height(max(12, m.height-8)).Render(strings.Join(lines, "\n"))
-	status := lipgloss.NewStyle().Foreground(tuiMuted).Render(m.status)
+	statusColor := tuiMuted
+	if strings.HasPrefix(m.status, "Error:") {
+		statusColor = tuiDanger
+	} else if strings.HasPrefix(m.status, "Moved ") || strings.HasPrefix(m.status, "Organization undone") {
+		statusColor = tuiSuccess
+	} else if strings.HasPrefix(m.status, "Not ") {
+		statusColor = tuiWarning
+	}
+	status := lipgloss.NewStyle().Foreground(statusColor).Render(m.status)
 	footer := lipgloss.NewStyle().Foreground(tuiMuted).Render("j/k panels • ←/→ scroll • enter refresh • d folder • o organize • u undo • q quit")
 	view := lipgloss.JoinVertical(lipgloss.Left, header, path, "", lipgloss.JoinHorizontal(lipgloss.Top, sidebar, " ", content), "", status, footer)
 	if m.modal != "" {
