@@ -22,6 +22,7 @@ brews:
   - name: download-inbox-cleaner
     ids:
       - default
+    directory: Formula
     repository:
       owner: stawan15
       name: homebrew-tap
