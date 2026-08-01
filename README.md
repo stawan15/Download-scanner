@@ -1,6 +1,6 @@
 # Download Inbox Cleaner
 
-A cautious, open-source macOS tool for reviewing and organizing files directly in your Downloads folder. It never deletes files automatically and requires explicit confirmation before moving anything.
+A cautious, open-source macOS TUI and CLI for reviewing, sorting, and safely organizing Downloads. It never deletes files automatically and requires explicit confirmation before moving anything.
 
 ## Quick start
 
@@ -11,9 +11,9 @@ cleaner tui
 ```
 
 The full-screen workspace has a sidebar for Scan, Files, Duplicates, Security,
-Organization, and Undo. Use `j`/`k` (or arrow keys) to navigate, `enter` to
-refresh a panel, `d` to select a folder, and `q` to quit. Organizing files
-requires typing `MOVE`; undo requires typing `UNDO`.
+Organization, and Undo. Use `j`/`k` (or arrow keys) to navigate, `←`/`→` to
+scroll long lists, `enter` to refresh a panel, `d` to select a folder, and `q`
+to quit. Organizing files requires typing `MOVE`; undo requires typing `UNDO`.
 
 ## Install
 
@@ -55,7 +55,25 @@ cleaner tui
 - `trash` moves files to macOS `~/.Trash`; it does not permanently delete them.
 - `undo` reverses only the latest successful organization, recorded at `~/.local/share/download-cleaner/last-organization.json`.
 
-Built-in organization recognizes Documents, Images, Archives, Installers, Fonts, Design, and Code files. Unrecognized files remain in place.
+## Organization categories
+
+| Destination | Examples |
+| --- | --- |
+| `Documents/PDF` | PDF files |
+| `Documents/Office` | Word, Excel, PowerPoint, OpenDocument, RTF |
+| `Documents/Text` | TXT, CSV, TSV, logs |
+| `Images` | PNG, JPG, HEIC, WebP, TIFF |
+| `Media/Video` | MP4, MOV, MKV, AVI, WebM |
+| `Media/Audio` | MP3, M4A, WAV, FLAC, OGG |
+| `Archives` | ZIP, TAR, GZ, RAR, 7Z |
+| `Installers` | DMG, PKG, ISO, MSI, APK |
+| `Fonts` | TTF, OTF, WOFF |
+| `Design` | SVG, Figma, Photoshop, Sketch, Excalidraw |
+| `Code` | Go, C#, HTML, JavaScript, JSON, YAML, Markdown and more |
+| `Other` | Every unmatched direct file |
+
+Directories and hidden files remain in place. Existing destination files are
+never overwritten.
 
 ## Development
 
@@ -71,7 +89,7 @@ Pushing a version tag triggers GoReleaser, which builds the Apple Silicon and
 Intel macOS archives, publishes the GitHub release, and updates the Homebrew
 formula in `stawan15/homebrew-tap` with the new URL and SHA256.
 
-The source repository needs an Actions secret named `TAP_GITHUB_TOKEN`: a
+The source repository needs an Actions secret named `HOMEBREW_TAP_GITHUB_TOKEN`: a
 fine-grained GitHub token with **Contents: Read and write** access to the
 `stawan15/homebrew-tap` repository. Create a release with:
 

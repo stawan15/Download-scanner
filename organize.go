@@ -235,21 +235,27 @@ func organizationFolder(fileName string) string {
 	switch strings.ToLower(filepath.Ext(fileName)) {
 	case ".pdf":
 		return "Documents/PDF"
-	case ".doc", ".docx", ".xlsx":
+	case ".doc", ".docx", ".xls", ".xlsx", ".ppt", ".pptx", ".odt", ".ods", ".odp", ".rtf":
 		return "Documents/Office"
-	case ".png", ".jpg", ".jpeg", ".gif":
+	case ".txt", ".csv", ".tsv", ".log":
+		return "Documents/Text"
+	case ".png", ".jpg", ".jpeg", ".gif", ".webp", ".heic", ".tif", ".tiff", ".bmp", ".ico":
 		return "Images"
-	case ".zip", ".gz", ".tar", ".rar":
+	case ".mp4", ".mov", ".mkv", ".avi", ".webm", ".m4v":
+		return "Media/Video"
+	case ".mp3", ".m4a", ".wav", ".aac", ".flac", ".ogg":
+		return "Media/Audio"
+	case ".zip", ".gz", ".tar", ".rar", ".7z", ".bz2", ".xz":
 		return "Archives"
-	case ".dmg", ".pkg", ".deb", ".iso":
+	case ".dmg", ".pkg", ".deb", ".iso", ".msi", ".apk":
 		return "Installers"
 	case ".ttf", ".otf", ".woff", ".woff2":
 		return "Fonts"
-	case ".excalidraw", ".svg":
+	case ".excalidraw", ".svg", ".ai", ".psd", ".sketch", ".fig":
 		return "Design"
-	case ".go", ".md":
+	case ".go", ".rs", ".py", ".rb", ".php", ".java", ".kt", ".swift", ".c", ".h", ".cc", ".cpp", ".cs", ".html", ".css", ".js", ".jsx", ".ts", ".tsx", ".sh", ".sql", ".json", ".yaml", ".yml", ".toml", ".xml", ".md":
 		return "Code"
 	default:
-		return ""
+		return "Other"
 	}
 }
