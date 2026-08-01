@@ -55,7 +55,9 @@ cleaner tui
 - `trash` moves files to macOS `~/.Trash`; it does not permanently delete them.
 - `undo` reverses only the latest successful organization, recorded at `~/.local/share/download-cleaner/last-organization.json`.
 
-Built-in organization recognizes Documents, Images, Archives, Installers, Fonts, Design, and Code files. Unrecognized files remain in place.
+Built-in organization recognizes Office and text documents, Images, Audio and video,
+Archives, Installers, Fonts, Design, and Code files. Files that do not match a
+known category go to `Other`; directories and hidden files remain in place.
 
 ## Development
 

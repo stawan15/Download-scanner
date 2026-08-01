@@ -14,11 +14,19 @@ func TestOrganizationFolder(t *testing.T) {
 		{"report.pdf", "Documents/PDF"},
 		{"budget.xlsx", "Documents/Office"},
 		{"photo.JPG", "Images"},
+		{"portrait.heic", "Images"},
+		{"recording.mov", "Media/Video"},
+		{"podcast.mp3", "Media/Audio"},
 		{"backup.tar.gz", "Archives"},
+		{"bundle.7z", "Archives"},
 		{"installer.dmg", "Installers"},
 		{"font.woff2", "Fonts"},
 		{"diagram.excalidraw", "Design"},
-		{"unknown.txt", ""},
+		{"notes.txt", "Documents/Text"},
+		{"CalendarInfoUC.cs", "Code"},
+		{"brakeman.html", "Code"},
+		{"unknown.bin", "Other"},
+		{"README", "Other"},
 	}
 
 	for _, test := range tests {
