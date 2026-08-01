@@ -23,6 +23,8 @@ func run(args []string) error {
 	case "version", "--version":
 		fmt.Println(version)
 		return nil
+	case "tui", "--tui":
+		return runTUI(os.Stdin, os.Stdout)
 	case "scan":
 		directory, format, err := directoryOptions(args[1:])
 		if err != nil {
@@ -59,6 +61,7 @@ Usage:
   cleaner organize [--apply --yes] [--dir DIRECTORY]
   cleaner trash [--apply --yes] [--dir DIRECTORY] <file-name> [file-name...]
   cleaner undo [--yes]
+  cleaner tui
   cleaner version
 
 Directories default to ~/Downloads. Commands that change files require both --apply and --yes.`)

@@ -1,6 +1,18 @@
 # Download Inbox Cleaner
 
-A cautious macOS command-line tool for reviewing and organizing files directly in your Downloads folder. It never deletes files automatically and requires `--apply --yes` before moving anything.
+A cautious, open-source macOS tool for reviewing and organizing files directly in your Downloads folder. It never deletes files automatically and requires explicit confirmation before moving anything.
+
+## Quick start
+
+Launch the interactive terminal interface:
+
+```sh
+cleaner tui
+```
+
+Use the numbered menu to scan a folder, find duplicates, review security risks,
+preview organization, or choose a different folder. Organizing files requires
+typing `MOVE`; undo requires typing `UNDO`.
 
 ## Install
 
@@ -27,6 +39,7 @@ cleaner organize --apply --yes --dir ~/Downloads
 cleaner trash --dir ~/Downloads old.zip unwanted.dmg
 cleaner trash --apply --yes --dir ~/Downloads old.zip unwanted.dmg
 cleaner undo --yes
+cleaner tui
 ```
 
 `cleaner organize apply` remains accepted as a legacy spelling for `--apply`, but it still needs `--yes` before files move.
@@ -50,3 +63,11 @@ go test ./...
 go vet ./...
 go build ./...
 ```
+
+## Contributing
+
+Contributions are welcome. Please read [CONTRIBUTING.md](CONTRIBUTING.md).
+
+## License
+
+This project is available under the [MIT License](LICENSE).
