@@ -27,6 +27,7 @@ type tuiModel struct {
 	height    int
 	title     string
 	content   []string
+	scroll    int
 	status    string
 	modal     string // "", "folder", "move", or "undo"
 	input     string
@@ -64,12 +65,24 @@ func (m tuiModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			return m, tea.Quit
 		case "up", "k":
 			m.active = (m.active + len(tuiSections) - 1) % len(tuiSections)
-			return m, nil
+			return m.loadSection(), nil
 		case "down", "j", "tab":
 			m.active = (m.active + 1) % len(tuiSections)
-			return m, nil
+			return m.loadSection(), nil
 		case "1", "2", "3", "4", "5", "6":
 			m.active = int(msg.String()[0] - '1')
+			return m.loadSection(), nil
+		case "ctrl+f", "pgdown", "right":
+			m.scroll = min(m.scroll+max(3, m.height/2), max(0, len(m.content)-1))
+			return m, nil
+		case "ctrl+b", "pgup", "left":
+			m.scroll = max(0, m.scroll-max(3, m.height/2))
+			return m, nil
+		case "home":
+			m.scroll = 0
+			return m, nil
+		case "end":
+			m.scroll = max(0, len(m.content)-1)
 			return m, nil
 		case "enter", "r":
 			return m.loadSection(), nil
@@ -83,7 +96,7 @@ func (m tuiModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			m.modal, m.input = "undo", ""
 			return m, nil
 		case "?":
-			m.status = "j/k navigate • enter refresh • d directory • o organize • u undo • q quit"
+			m.status = "j/k panels • ←/→ scroll • enter refresh • d folder • o organize • u undo • q quit"
 			return m, nil
 		}
 	}
@@ -118,7 +131,7 @@ func (m tuiModel) updateModal(key tea.KeyMsg) (tea.Model, tea.Cmd) {
 			} else {
 				var out bytes.Buffer
 				err := applyOrganizationTo(m.directory, &out)
-				m.status = strings.TrimSpace(out.String())
+				m.status = operationStatus(out.String())
 				if err != nil {
 					m.status = "Error: " + err.Error() + "\n" + m.status
 				}
@@ -130,7 +143,7 @@ func (m tuiModel) updateModal(key tea.KeyMsg) (tea.Model, tea.Cmd) {
 			} else {
 				var out bytes.Buffer
 				err := undoOrganizationTo(&out)
-				m.status = strings.TrimSpace(out.String())
+				m.status = operationStatus(out.String())
 				if err != nil {
 					m.status = "Error: " + err.Error() + "\n" + m.status
 				}
@@ -148,6 +161,7 @@ func (m tuiModel) updateModal(key tea.KeyMsg) (tea.Model, tea.Cmd) {
 
 func (m tuiModel) loadSection() tuiModel {
 	m.title = tuiSections[m.active]
+	m.scroll = 0
 	switch m.active {
 	case 0, 1:
 		result, err := scanResult(m.directory)
@@ -247,10 +261,20 @@ func (m tuiModel) View() string {
 	menu = append(menu, "", lipgloss.NewStyle().Foreground(tuiMuted).Render("d  change folder"))
 	sidebar := lipgloss.NewStyle().Border(lipgloss.RoundedBorder()).BorderForeground(tuiBorder).Padding(1, 1).Width(sidebarWidth).Render(strings.Join(menu, "\n"))
 
-	lines := append([]string{lipgloss.NewStyle().Bold(true).Foreground(tuiPrimary).Render(m.title), ""}, m.content...)
+	maxLines := max(5, m.height-12)
+	start := min(m.scroll, max(0, len(m.content)-1))
+	end := min(len(m.content), start+maxLines)
+	visible := append([]string{}, m.content[start:end]...)
+	if start > 0 {
+		visible = append([]string{lipgloss.NewStyle().Foreground(tuiMuted).Render("↑ more above")}, visible...)
+	}
+	if end < len(m.content) {
+		visible = append(visible, lipgloss.NewStyle().Foreground(tuiMuted).Render("↓ more below  (←/→ to scroll)"))
+	}
+	lines := append([]string{lipgloss.NewStyle().Bold(true).Foreground(tuiPrimary).Render(m.title), ""}, visible...)
 	content := lipgloss.NewStyle().Border(lipgloss.RoundedBorder()).BorderForeground(tuiBorder).Padding(1, 2).Width(contentWidth).Height(max(12, m.height-8)).Render(strings.Join(lines, "\n"))
 	status := lipgloss.NewStyle().Foreground(tuiMuted).Render(m.status)
-	footer := lipgloss.NewStyle().Foreground(tuiMuted).Render("j/k navigate • enter refresh • d folder • o organize • u undo • q quit")
+	footer := lipgloss.NewStyle().Foreground(tuiMuted).Render("j/k panels • ←/→ scroll • enter refresh • d folder • o organize • u undo • q quit")
 	view := lipgloss.JoinVertical(lipgloss.Left, header, path, "", lipgloss.JoinHorizontal(lipgloss.Top, sidebar, " ", content), "", status, footer)
 	if m.modal != "" {
 		prompt := "Folder path"
@@ -289,4 +313,14 @@ func humanSize(size int64) string {
 		return fmt.Sprintf("%.1f MB", float64(size)/(1024*1024))
 	}
 	return fmt.Sprintf("%.1f GB", float64(size)/(1024*1024*1024))
+}
+
+func operationStatus(output string) string {
+	lines := strings.Split(strings.TrimSpace(output), "\n")
+	for i := len(lines) - 1; i >= 0; i-- {
+		if strings.TrimSpace(lines[i]) != "" {
+			return strings.TrimSpace(lines[i])
+		}
+	}
+	return "Action completed."
 }

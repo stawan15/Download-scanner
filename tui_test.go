@@ -21,3 +21,10 @@ func TestHumanSize(t *testing.T) {
 		t.Fatalf("humanSize() = %q, want 1.5 KB", got)
 	}
 }
+
+func TestOperationStatusUsesSummaryLine(t *testing.T) {
+	output := "Moved: first.png\nMoved: second.png\n\nMoved 2 files. Run 'cleaner undo --yes' to reverse this organization.\n"
+	if got := operationStatus(output); !strings.HasPrefix(got, "Moved 2 files.") {
+		t.Fatalf("operationStatus() = %q", got)
+	}
+}
