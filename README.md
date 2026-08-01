@@ -64,6 +64,21 @@ go vet ./...
 go build ./...
 ```
 
+## Releases
+
+Pushing a version tag triggers GoReleaser, which builds the Apple Silicon and
+Intel macOS archives, publishes the GitHub release, and updates the Homebrew
+formula in `stawan15/homebrew-tap` with the new URL and SHA256.
+
+The source repository needs an Actions secret named `TAP_GITHUB_TOKEN`: a
+fine-grained GitHub token with **Contents: Read and write** access to the
+`stawan15/homebrew-tap` repository. Create a release with:
+
+```sh
+git tag v1.2.0
+git push origin v1.2.0
+```
+
 ## Contributing
 
 Contributions are welcome. Please read [CONTRIBUTING.md](CONTRIBUTING.md).

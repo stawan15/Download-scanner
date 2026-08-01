@@ -19,10 +19,18 @@ archives:
     name_template: "{{ .ProjectName }}_{{ .Version }}_{{ .Os }}_{{ .Arch }}"
 
 brews:
-  - repository:
+  - name: download-inbox-cleaner
+    ids:
+      - default
+    repository:
       owner: stawan15
       name: homebrew-tap
-    homepage: https://github.com/stawan15/download-inbox-cleaner
+      branch: main
+      token: "{{ .Env.TAP_GITHUB_TOKEN }}"
+    homepage: https://github.com/stawan15/Download-scanner
     description: Cautious macOS Downloads-folder cleaner
+    commit_author:
+      name: github-actions[bot]
+      email: 41898282+github-actions[bot]@users.noreply.github.com
     install: |
       bin.install "cleaner"
